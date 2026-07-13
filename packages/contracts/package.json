@@ -1,0 +1,37 @@
+{
+  "name": "@shadequy/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:arbitrumSepolia": "hardhat ignition deploy ./ignition/modules/ShadeYield.ts --network arbitrumSepolia",
+    "deploy:sepolia": "hardhat ignition deploy ./ignition/modules/ShadeYield.ts --network sepolia"
+  },
+  "dependencies": {
+    "@iexec-nox/nox-confidential-contracts": "^0.2.0",
+    "@iexec-nox/nox-protocol-contracts": "^0.2.4",
+    "@nomicfoundation/hardhat-keystore": "^3.0.12",
+    "@nomicfoundation/hardhat-network-helpers": "^3.0.11",
+    "@nomicfoundation/hardhat-node-test-runner": "^3.0.17",
+    "@nomicfoundation/hardhat-verify": "^3.0.21",
+    "@nomicfoundation/hardhat-viem": "^3.0.9",
+    "@nomicfoundation/hardhat-viem-assertions": "^3.1.2",
+    "@nomicfoundation/ignition-core": "^3.1.8",
+    "chai": "^6.2.2",
+    "ethers": "^6.17.0",
+    "graphql": "^17.0.2"
+  },
+  "devDependencies": {
+    "@iexec-nox/nox-hardhat-plugin": "^0.1.0",
+    "@nomicfoundation/hardhat-ignition": "^3.1.8",
+    "@nomicfoundation/hardhat-ignition-viem": "^3.1.6",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "hardhat": "^3.9.0",
+    "typescript": "~5.8.0",
+    "viem": "^2.46.3"
+  },
+  "type": "module"
+}

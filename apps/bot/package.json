@@ -1,0 +1,21 @@
+{
+  "name": "@shadequy/bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@iexec-nox/nox-protocol-sdk": "^0.2.4",
+    "ethers": "^6.13.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "viem": "^2.46.3"
+  },
+  "devDependencies": {
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "tsx": "^4.20.5",
+    "typescript": "~5.8.0"
+  }
+}
