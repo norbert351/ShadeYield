@@ -1,0 +1,11 @@
+{
+  "chain": "arbitrumSepolia",
+  "chainId": 421614,
+  "vault": "0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85",
+  "vaultName": "ShadeYield Encrypted Vault",
+  "asset": "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+  "owner": "0x26e4Fb554144CBB883DF1705360af85E61Af2935",
+  "deployTx": "0xb92490dffb4b23e20cedf9f8008715a5378f6eaed00fb798bcae8d8c21175684",
+  "initTx": "0xf9cdffce36664f923c768b6b9584426baadbeebf7825eb3943c868ecf934ba77",
+  "deployedAt": "2026-07-21T12:28:58.306Z"
+}

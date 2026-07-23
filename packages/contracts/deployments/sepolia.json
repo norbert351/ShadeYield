@@ -1,0 +1,12 @@
+{
+  "chain": "arbitrumSepolia",
+  "chainId": 421614,
+  "deployer": "0x26e4Fb554144CBB883DF1705360af85E61Af2935",
+  "shadeToken": "0x39a54acda9c9b8deaf3e569bcf87eebf8e7a15d5",
+  "vault": "0x5b1876a08aa687a70203ae28f1421d62f538dd1c",
+  "aaveStrategy": "0x15bd317773d6793d7de2b4cad0fa6cb23440c990",
+  "uniStrategy": "0x1e59cee63bbdcc6610a4a959e0b5ee5e7904daa6",
+  "testDAI": "0x8adb1d9f04328c355db13276f2be81fcf2710ff9",
+  "mockRouter": "0x2d5c88b952aaaa71457a22071e1b9f04d47977e0",
+  "mockPM": "0x1cf89361e70211f0b9ee879826908880bc5ab5ab"
+}

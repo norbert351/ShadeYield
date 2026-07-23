@@ -8,8 +8,6 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@iexec-nox/nox-protocol-sdk": "^0.2.4",
-    "ethers": "^6.13.0",
     "node-telegram-bot-api": "^0.66.0",
     "viem": "^2.46.3"
   },

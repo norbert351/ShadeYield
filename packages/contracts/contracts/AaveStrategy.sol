@@ -19,7 +19,7 @@ contract AaveStrategy is IStrategy {
     IPool public immutable pool;
     address public immutable aToken;
 
-    uint256 public principal;
+    uint256 public principal; // tracked in aToken units
 
     modifier onlyVault() {
         require(msg.sender == vault, "Only vault");
@@ -53,17 +53,19 @@ contract AaveStrategy is IStrategy {
         uint256 before = IERC20(aToken).balanceOf(address(this));
         pool.supply(asset, amount, address(this), 0);
         uint256 received = IERC20(aToken).balanceOf(address(this)) - before;
-        principal += amount;
+        principal += received;
         return received;
     }
 
     function withdraw(uint256 amount) external override onlyVault returns (uint256) {
         require(amount > 0, "Zero amount");
-        uint256 before = IERC20(asset).balanceOf(address(this));
+        uint256 aTokenBefore = IERC20(aToken).balanceOf(address(this));
+        uint256 assetBefore = IERC20(asset).balanceOf(address(this));
         pool.withdraw(asset, amount, vault);
-        uint256 pulled = IERC20(asset).balanceOf(address(this)) - before;
-        if (principal >= pulled) {
-            principal -= pulled;
+        uint256 pulled = IERC20(asset).balanceOf(address(this)) - assetBefore;
+        uint256 burned = aTokenBefore - IERC20(aToken).balanceOf(address(this));
+        if (principal >= burned) {
+            principal -= burned;
         } else {
             principal = 0;
         }
@@ -75,12 +77,13 @@ contract AaveStrategy is IStrategy {
         uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
         require(aTokenBalance > principal, "No yield");
         uint256 yield = aTokenBalance - principal;
-        require(IERC20(aToken).balanceOf(address(this)) >= yield, "Insufficient aToken");
-        uint256 before = IERC20(asset).balanceOf(address(this));
+        uint256 aTokenBefore = IERC20(aToken).balanceOf(address(this));
+        uint256 assetBefore = IERC20(asset).balanceOf(address(this));
         pool.withdraw(asset, yield, vault);
-        uint256 pulled = IERC20(asset).balanceOf(address(this)) - before;
-        if (principal >= pulled) {
-            principal -= pulled;
+        uint256 pulled = IERC20(asset).balanceOf(address(this)) - assetBefore;
+        uint256 burned = aTokenBefore - IERC20(aToken).balanceOf(address(this));
+        if (principal >= burned) {
+            principal -= burned;
         } else {
             principal = 0;
         }
@@ -91,9 +94,9 @@ contract AaveStrategy is IStrategy {
     function emergencyWithdraw() external override onlyVault returns (uint256) {
         uint256 aTokenBalance = IERC20(aToken).balanceOf(address(this));
         if (aTokenBalance == 0) return 0;
-        uint256 before = IERC20(asset).balanceOf(address(this));
+        uint256 assetBefore = IERC20(asset).balanceOf(address(this));
         pool.withdraw(asset, aTokenBalance, vault);
-        uint256 pulled = IERC20(asset).balanceOf(address(this)) - before;
+        uint256 pulled = IERC20(asset).balanceOf(address(this)) - assetBefore;
         principal = 0;
         IERC20(asset).safeTransfer(vault, pulled);
         return pulled;

@@ -1,0 +1,10 @@
+{
+  "chain": "arbitrumSepolia",
+  "chainId": 421614,
+  "vault": "0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85",
+  "aaveStrategy": "0xbec0722b889bd6064db52d3339b1e3ae9f00abf1",
+  "uniStrategy": "0x3f21e1d960a6e02a6b54f4100092f57ca6b8399e",
+  "deployTxAave": "0x83cb6dbca0a2b7e9dca38e1d53b40a6908b32605e7bed03b1f59a25d47955270",
+  "deployTxUni": "0x8ceb62d1839f8d3182baa3a7d77a9a225b0aeca58e2fc4de32feb393e4543a10",
+  "deployedAt": "2026-07-21T22:31:06.288Z"
+}

@@ -8,18 +8,11 @@ import {IStrategy} from "./interfaces/IStrategy.sol";
 
 /**
  * @title ShadeAaveVault
- * @notice Confidential yield vault that routes public ERC-20 deposits into public
- *         DeFi protocols (Aave + Uniswap V3) while keeping share balances and
- *         aggregate totals encrypted on Nox.
- *
- *         WTF Hackathon fit: privacy wrapper around existing open-source DeFi.
- *         Users deposit a public asset; the vault mints encrypted shares;
- *         the owner allocates pooled capital to Aave / Uniswap strategies;
- *         yield accrues on public protocols; individual ownership stays private.
- *
- *         Withdrawals are two-step Nox-native: burn encrypted shares, publish
- *         the decrypted asset amount off-chain via Nox, then finalize the public
- *         ERC-20 transfer.
+ * @notice Confidential yield vault. Encrypted shares via Nox.
+ *         Constructor takes pre-encrypted handles for initial state.
+ *         Uses Nox.fromExternal instead of Nox.toEuint256 for zero-init.
+ *         Deposit / harvest still use Nox.toEuint256 (wrapAsPublicHandle
+ *         works on Arbitrum Sepolia precompile).
  */
 contract ShadeAaveVault {
     using SafeERC20 for IERC20;
@@ -27,6 +20,8 @@ contract ShadeAaveVault {
     string public vaultName;
     address public asset;
     address public owner;
+
+    uint256 public constant HARVEST_FEE_BPS = 5; // 0.05% caller incentive for harvestAll
 
     euint256 public totalShares;
     euint256 public totalAssets;
@@ -43,7 +38,7 @@ contract ShadeAaveVault {
     event StrategyAdded(address indexed strategy);
     event Allocated(address indexed strategy, uint256 amount);
     event Deallocated(address indexed strategy, uint256 amount);
-    event Harvested(uint256 totalYield);
+    event Harvested(uint256 totalYield, uint256 callerFee);
     event EmergencyDeallocated(address indexed strategy, uint256 amount);
 
     modifier onlyOwner() {
@@ -51,15 +46,28 @@ contract ShadeAaveVault {
         _;
     }
 
-    constructor(string memory _name, address _asset) {
+    constructor(
+        string memory _name,
+        address _asset,
+        address _owner
+    ) {
         require(_asset != address(0), "Zero asset");
-        owner = msg.sender;
+        owner = _owner;
         vaultName = _name;
         asset = _asset;
+    }
 
-        totalShares = Nox.toEuint256(0);
-        totalAssets = Nox.toEuint256(0);
-
+    /// @notice Initialize encrypted state with pre-encrypted handles (call once after deploy).
+    function initialize(
+        bytes32 _totalSharesHandle,
+        bytes calldata _totalSharesProof,
+        bytes32 _totalAssetsHandle,
+        bytes calldata _totalAssetsProof
+    ) external {
+        require(msg.sender == owner, "Not owner");
+        require(euint256.unwrap(totalShares) == bytes32(0), "Already initialized");
+        totalShares = Nox.fromExternal(externalEuint256.wrap(_totalSharesHandle), _totalSharesProof);
+        totalAssets = Nox.fromExternal(externalEuint256.wrap(_totalAssetsHandle), _totalAssetsProof);
         Nox.allowThis(totalShares);
         Nox.allowThis(totalAssets);
         Nox.allow(totalShares, owner);
@@ -67,9 +75,6 @@ contract ShadeAaveVault {
         Nox.allowPublicDecryption(totalAssets);
     }
 
-    /**
-     * @notice Deposit public tokens and receive encrypted shares.
-     */
     function deposit(uint256 amount) external {
         require(amount > 0, "Zero amount");
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
@@ -92,12 +97,6 @@ contract ShadeAaveVault {
         emit Deposited(msg.sender, amount);
     }
 
-    /**
-     * @notice Request withdrawal by burning encrypted shares.
-     *         Computes and stores the encrypted asset amount; exposes it for
-     *         off-chain decryption. The public totals are updated immediately
-     *         in encrypted form.
-     */
     function requestWithdraw(externalEuint256 sharesHandle, bytes calldata inputProof) external {
         euint256 sharesToBurn = Nox.fromExternal(sharesHandle, inputProof);
 
@@ -126,29 +125,20 @@ contract ShadeAaveVault {
         emit WithdrawRequested(msg.sender);
     }
 
-    /**
-     * @notice Finalize withdrawal after the decrypted amount is known off-chain.
-     *         The caller passes the exact plaintext amount returned by Nox.
-     */
     function claimWithdraw(address user, uint256 amount) external {
         require(amount > 0, "Zero amount");
         require(IERC20(asset).balanceOf(address(this)) >= amount, "Insufficient idle");
 
-        euint256 pending = pendingWithdrawals[user];
-        pending = Nox.sub(pending, Nox.toEuint256(amount));
-        pendingWithdrawals[user] = pending;
+        pendingWithdrawals[user] = Nox.sub(pendingWithdrawals[user], Nox.toEuint256(amount));
 
-        Nox.allowThis(pending);
-        Nox.allowPublicDecryption(pending);
+        Nox.allowThis(pendingWithdrawals[user]);
+        Nox.allowPublicDecryption(pendingWithdrawals[user]);
 
         IERC20(asset).safeTransfer(user, amount);
 
         emit WithdrawClaimed(user, amount);
     }
 
-    /**
-     * @notice Add a strategy contract.
-     */
     function addStrategy(address _strategy) external onlyOwner {
         require(_strategy != address(0), "Zero strategy");
         require(!isStrategy[_strategy], "Already added");
@@ -160,39 +150,26 @@ contract ShadeAaveVault {
         emit StrategyAdded(_strategy);
     }
 
-    /**
-     * @notice Allocate idle capital to a strategy.
-     */
     function allocateToStrategy(address _strategy, uint256 amount) external onlyOwner {
         require(isStrategy[_strategy], "Invalid strategy");
         require(amount > 0, "Zero amount");
         require(IERC20(asset).balanceOf(address(this)) >= amount, "Insufficient idle");
-
         _harvestAll();
         IStrategy(_strategy).deposit(amount);
         totalAllocated += amount;
-
         emit Allocated(_strategy, amount);
     }
 
-    /**
-     * @notice Pull capital back from a strategy to the vault.
-     */
     function deallocateFromStrategy(address _strategy, uint256 amount) external onlyOwner {
         require(isStrategy[_strategy], "Invalid strategy");
         require(amount > 0, "Zero amount");
-
         _harvestAll();
         uint256 pulled = IStrategy(_strategy).withdraw(amount);
         if (totalAllocated >= pulled) totalAllocated -= pulled; else totalAllocated = 0;
-
         emit Deallocated(_strategy, pulled);
     }
 
-    /**
-     * @notice Harvest yield from all strategies.
-     */
-    function harvestAll() external onlyOwner returns (uint256 totalYield) {
+    function harvestAll() external returns (uint256 totalYield) {
         return _harvestAll();
     }
 
@@ -200,21 +177,23 @@ contract ShadeAaveVault {
         for (uint256 i = 0; i < strategies.length; i++) {
             address s = strategies[i];
             if (!isStrategy[s]) continue;
-            uint256 yield = IStrategy(s).harvest();
-            if (yield > 0) {
-                totalYield += yield;
-                totalAssets = Nox.add(totalAssets, Nox.toEuint256(yield));
+            uint256 yield_ = IStrategy(s).harvest();
+            if (yield_ > 0) {
+                totalYield += yield_;
+                uint256 fee = (yield_ * HARVEST_FEE_BPS) / 10000;
+                uint256 remaining = yield_ - fee;
+                if (fee > 0 && msg.sender != owner) {
+                    IERC20(asset).safeTransfer(msg.sender, fee);
+                }
+                totalAssets = Nox.add(totalAssets, Nox.toEuint256(remaining));
             }
         }
         if (totalYield > 0) {
             _allowVaultState();
-            emit Harvested(totalYield);
+            emit Harvested(totalYield, msg.sender == owner ? 0 : (totalYield * HARVEST_FEE_BPS) / 10000);
         }
     }
 
-    /**
-     * @notice Permissionless emergency exit when a strategy is in danger.
-     */
     function emergencyDeallocate(address _strategy) external {
         require(isStrategy[_strategy], "Invalid strategy");
         uint256 pulled = IStrategy(_strategy).emergencyWithdraw();
@@ -222,9 +201,6 @@ contract ShadeAaveVault {
         emit EmergencyDeallocated(_strategy, pulled);
     }
 
-    /**
-     * @notice Return encrypted share balance for a user.
-     */
     function balanceOfShares(address user) external view returns (euint256) {
         return _shares[user];
     }

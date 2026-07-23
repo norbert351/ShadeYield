@@ -1,0 +1,6 @@
+{
+  "name": "ShadeYield",
+  "description": "Privacy-wrapped public DeFi using iExec Nox share encryption. Secure yield from Aave and Uniswap without revealing your balances.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

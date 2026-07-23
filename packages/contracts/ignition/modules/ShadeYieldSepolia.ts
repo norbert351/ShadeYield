@@ -3,9 +3,8 @@ import { ARBITRUM } from "../../test/helpers/addresses.js";
 
 const INITIAL_SUPPLY = BigInt(1_000_000_000_000_000); // 1e15 wei
 
-const ShadeYieldModule = buildModule("ShadeYield", (m) => {
+const ShadeYieldDeployableModule = buildModule("ShadeYield", (m) => {
   const shadeToken = m.contract("ShadeToken", ["Shade USD Coin", "sUSDC", 18, INITIAL_SUPPLY]);
-  const vault = m.contract("ShadeAaveVault", ["ShadeYield Vault", ARBITRUM.USDC]);
 
   const aaveStrategy = m.contract("AaveStrategy", [ARBITRUM.USDC, ARBITRUM.AAVE_V3_POOL]);
 
@@ -14,12 +13,12 @@ const ShadeYieldModule = buildModule("ShadeYield", (m) => {
     ARBITRUM.DAI,
     ARBITRUM.UNISWAP_V3_POSITION_MANAGER,
     ARBITRUM.UNISWAP_V3_SWAP_ROUTER,
-    500, // 0.05% fee tier
+    500,
     -60,
     60,
   ]);
 
-  return { shadeToken, vault, aaveStrategy, uniStrategy };
+  return { shadeToken, aaveStrategy, uniStrategy };
 });
 
-export default ShadeYieldModule;
+export default ShadeYieldDeployableModule;

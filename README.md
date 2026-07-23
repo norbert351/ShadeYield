@@ -1,140 +1,107 @@
 # ShadeYield
 
-A **Nox-native privacy wrapper** around existing public DeFi protocols for the iExec WTF Hackathon.
+A **Nox-native private yield vault** on Arbitrum Sepolia. Users deposit USDC into a vault that mints **encrypted shares** (Nox `euint256`). Capital is deployed to **Aave V3** and **Uniswap V3** via strategy adapters. Individual share balances are private; protocol composability is preserved.
 
-Users deposit a public ERC-20 asset into a vault that mints **encrypted shares** on iExec Nox. The vault owner allocates pooled capital to yield strategies backed by **Aave V3** and **Uniswap V3** without modifying either protocol. Individual ownership stays private; protocol composability stays intact.
+## Live Deployments (Arbitrum Sepolia)
 
-## Why this fits WTF
+| Contract | Address | Notes |
+|----------|---------|-------|
+| **ShadeAaveVault (Encrypted)** | `0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85` | Nox `euint256` shares, permissionless harvest |
+| ShadeAaveVaultSimple | `0x5b1876a08aa687a70203ae28f1421d62f538dd1c` | Transparent vault (fallback) |
+| ShadeToken (sUSDC) | `0x39a54acda9c9b8deaf3e569bcf87eebf8e7a15d5` | 18 decimal test stablecoin |
+| USDC | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | 6 decimal test USDC |
+| AaveStrategy (enc vault) | `0xbec0722b889bd6064db52d3339b1e3ae9f00abf1` | Deposits into Aave V3 Pool |
+| UniswapV3Strategy (enc vault) | `0x3f21e1d960a6e02a6b54f4100092f57ca6b8399e` | USDC/DAI concentrated liquidity |
+| Aave V3 Pool | `0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff` | Public Aave pool on Sepolia |
+| NoxCompute | `0xd464B198f06756a1d00be223634b85E0a731c229` | Nox encrypted compute precompile |
 
-The WTF challenge asks for real open-source protocol integrations that gain privacy through Nox — not standalone demos.
+**Chain:** Arbitrum Sepolia (`421614`) · **RPC:** `https://sepolia-rollup.arbitrum.io/rpc` · **Explorer:** `https://sepolia.arbiscan.io`
 
-| Requirement | ShadeYield |
-|---|---|
-| Build on Nox | ✅ Encrypted user share balances + aggregate TVL |
-| Real protocol integration | ✅ Aave V3 lending + Uniswap V3 liquidity |
-| Don't modify base protocols | ✅ Aave/Uniswap contracts are untouched; adapter strategies sit on top |
-| Composability preserved | ✅ Public ERC-20 asset in/out, public protocol positions |
-| Close to deployable product | ✅ Modular strategy adapters, owner controls, emergency exits |
+## Harvest (Permissionless)
 
-## Architecture
+`harvestAll()` is **open to everyone** — no owner-only restriction. The caller earns **0.05%** of harvested yield as an incentive. Anyone can call it via the Telegram bot (`/harvest`), the web UI, or directly on-chain.
 
-```text
-User deposits public sUSDC
-        |
-        v
-+-----------------------------------+
-|      ShadeAaveVault               |
-|  - mints encrypted shares         |
-|  - tracks encrypted totalAssets   |
-|  - owner allocates capital        |
-+-----------------------------------+
-        |
-        +----------+----------+
-        |                     |
-        v                     v
-  AaveStrategy        UniswapV3Strategy
-        |                     |
-        v                     v
-   Aave V3 Pool      Uniswap V3 Position Manager
-   (public protocol) (public protocol)
-```
-
-## Privacy model
+## Privacy Model
 
 | Data | Visibility |
-|---|---|
+|------|------------|
 | Deposit/withdraw asset amounts | Public (standard ERC-20 transfers) |
 | User share balance | Encrypted (Nox `euint256`) |
 | Vault total assets | Encrypted, public decryption allowed for TVL |
 | Strategy positions | Public (visible on Aave/Uniswap) |
 | Individual yield share | Private (derived from encrypted shares) |
 
-## Contracts
+## Architecture
 
-| Contract | Purpose |
-|---|---|
-| `ShadeToken.sol` | Public ERC-20 test stablecoin (sUSDC / sDAI) |
-| `ShadeAaveVault.sol` | Confidential vault with encrypted shares, strategy allocator, harvester |
-| `AaveStrategy.sol` | Adapter that deposits/withdraws from Aave V3 Pool |
-| `UniswapV3Strategy.sol` | Adapter that provides liquidity via Uniswap V3 NFT positions |
-| `interfaces/IPool.sol` | Minimal Aave V3 Pool interface |
-| `interfaces/INonfungiblePositionManager.sol` | Minimal Uniswap V3 position manager interface |
-| `interfaces/IStrategy.sol` | Common strategy interface |
-| `mocks/*` | Mock Aave Pool + Uniswap Position Manager for local tests |
+```
+User deposits USDC → Encrypted Vault → allocates to strategies
+         ↓                                    ↓
+   Encrypted shares (Nox)            AaveStrategy → Aave V3 Pool
+         ↓                           UniswapV3Strategy → Uniswap V3
+   Private balance                        ↓
+                                   harvestAll() (permissionless)
+                                          ↓
+                               Yield → vault + 0.05% caller incentive
+```
 
-## Network
+## Quick Links
 
-Nox is live on **Arbitrum Sepolia**:
+- **Telegram Bot:** [@shadeyield_bot](https://t.me/shadeyield_bot) — `/start`, `/status`, `/balance`, `/harvest`, `/contracts`
+- **Web UI:** `http://localhost:3000` (or Cloudflare tunnel)
+- **Explorer:** [Arbiscan Sepolia](https://sepolia.arbiscan.io)
 
-| Key | Value |
-|---|---|
-| Chain ID | `421614` |
-| NoxCompute | `0xd464B198f06756a1d00be223634b85E0a731c229` |
-| RPC | `https://sepolia-rollup.arbitrum.io/rpc` |
-| Explorer | `https://sepolia.arbiscan.io` |
+## Getting Test USDC
+
+- Arbitrum Sepolia faucet: https://faucet.quicknode.com/arbitrum/sepolia
+- Request USDC + ETH for gas on Arbitrum Sepolia
 
 ## Setup
 
 ```bash
 cd packages/contracts
 npm install
-```
-
-## Compile
-
-```bash
 npx hardhat compile
-```
-
-## Test
-
-> ⚠️ Local tests require Docker for Nox off-chain services.
-
-```bash
-npx hardhat test
-```
-
-If Docker is unavailable, the Hardhat Nox plugin will report:
-```
-[nox] Cannot connect to the Docker daemon. Is Docker running?
 ```
 
 ## Deploy
 
-### Arbitrum Sepolia (Nox-enabled)
+### Encrypted vault + strategies
 
 ```bash
-export PRIVATE_KEY=0x...
-export ARBITRUM_SEPOLIA_RPC=https://sepolia-rollup.arbitrum.io/rpc
-npm run deploy:arbitrumSepolia
+export PK=0x...
+RPC=https://sepolia-rollup.arbitrum.io/rpc npx tsx scripts/deployNoxEncrypted.ts
+RPC=https://sepolia-rollup.arbitrum.io/rpc npx tsx scripts/deployStrategies.ts
 ```
 
-### Sepolia (non-Nox / plain EVM)
-
-> Plain Sepolia does not have Nox protocol infrastructure. Only deploy here if you remove all `Nox.*` ACL calls.
+### Simple vault (non-Nox)
 
 ```bash
 export PRIVATE_KEY=0x...
-export SEPOLIA_RPC=https://sepolia.drpc.org
-npm run deploy:sepolia
+npx hardhat run scripts/deploySepolia.ts --network arbitrumSepolia
+```
+
+## Test
+
+```bash
+npx hardhat test        # local (requires Docker for Nox off-chain services)
 ```
 
 ## Usage flow
 
-1. Deploy `ShadeToken` + `ShadeAaveVault`.
-2. Deploy `AaveStrategy(asset, aavePool)` and/or `UniswapV3Strategy(asset, token1, positionManager, ...)`.
-3. Call `vault.addStrategy(strategy)`.
-4. Users call `vault.deposit(amount)`.
-5. Owner calls `vault.allocateToStrategy(strategy, amount)` to deploy capital.
-6. Owner calls `vault.harvestAll()` to collect yield back into the vault.
-7. Users call `vault.requestWithdraw(encryptedSharesHandle, inputProof)` to burn shares and expose the asset amount via Nox.
-8. After off-chain decryption, anyone calls `vault.claimWithdraw(user, amount)` to transfer public assets.
+1. Deploy vault + strategies (above)
+2. Deposit USDC via web UI or bot (`/deposit <amount>`)
+3. Allocate to strategies: `vault.allocateToStrategy(strategyAddr, amount)`
+4. Call `vault.harvestAll()` (permissionless) to compound yield
+5. Request withdrawal: `vault.requestWithdraw(shares)`, then `vault.claimWithdraw(user, amount)`
 
-## Known limitations
+## Bots & Automation
 
-- `claimWithdraw` trusts the caller to supply the exact decrypted amount. In production, use a Nox-aware relayer or keeper that reads the decrypted `pendingWithdrawals` value off-chain before finalizing.
-- `UniswapV3Strategy.totalAssets()` uses a simplified valuation. A production version needs a price oracle for the second token.
-- Tests require a running Docker daemon for Nox off-chain services.
+| Service | Schedule | Method |
+|---------|----------|--------|
+| Telegram Bot | Continuous | `npx tsx apps/bot/src/index.ts` |
+| Harvest | Every 8h | Cron script → `harvestAll()` |
+| Bot Keeper | Every 5m | Cron check → restart if down |
+| Web Keeper | Every 5m | Cron check → restart vite if down |
 
 ## License
 

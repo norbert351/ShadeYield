@@ -1,0 +1,9 @@
+{
+  "name": "shadeyield-nox-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "viem": "^2.17.0",
+    "@iexec-nox/handle": "^0.1.0"
+  }
+}
