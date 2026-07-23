@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: shadeyield-nox-api
+    runtime: node
+    repo: https://github.com/norbert351/ShadeYield
+    rootDir: apps/nox-api
+    buildCommand: npm install
+    startCommand: node index.mjs
+    plan: starter
+    envVars:
+      - key: NOX_API_PRIVATE_KEY
+        sync: false
+      - key: RPC_URL
+        sync: false
+      - key: PORT
+        value: "10000"

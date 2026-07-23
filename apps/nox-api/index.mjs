@@ -1,42 +1,68 @@
 /**
  * ShadeYield Nox Decrypt API
- * Runs on Node.js — proxies encrypted vault reads through the Nox Handle SDK.
- * Frontend calls this to get decrypted balances.
+ * Reads encrypted vault data from the Nox contract on Arbitrum Sepolia
+ * and decrypts it via @iexec-nox/handle SDK (publicDecrypt, no ACL needed).
+ *
+ * Env vars:
+ *   NOX_API_PRIVATE_KEY (required) — wallet private key for the Nox Handle client
+ *   PORT                       (optional) — defaults to 3139
+ *   RPC_URL                    (optional) — Arbitrum Sepolia RPC endpoint
  */
 import { createServer } from 'http';
+import { createPublicClient, createWalletClient, http } from 'viem';
+import { arbitrumSepolia } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
+import { createViemHandleClient } from '@iexec-nox/handle';
 
-const PORT = 3139;
+const PORT = parseInt(process.env.PORT || '3139', 10);
+const PK = process.env.NOX_API_PRIVATE_KEY || '';
+const RPC_URL = process.env.RPC_URL || undefined;
+const VAULT = '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85';
 
-// CORS headers
-const headers = {
+if (!PK) {
+  console.error('[nox-api] NOX_API_PRIVATE_KEY env var is required');
+  process.exit(1);
+}
+
+const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
 };
 
-let noxClient: any = null;
-let nxa: any = null;
+const transport = http(RPC_URL);
 
-// ── Lazy load Nox SDK (ESM only, use dynamic import) ──
-async function getNox() {
-  if (noxClient) return noxClient;
-  // Nox handle SDK viem wrapper
-  nxa = await import('@iexec-nox/handle');
-  const hc = nxa.createHandleClient;
-  noxClient = await hc({
-    gatewayUrl: 'https://gateway-testnets.noxprotocol.dev',
-    handleAddress: '0xFE0d168079aA6b73A348FC622B25e26A24fD2411' as `0x${string}`,
-  });
-  console.log('[nox-api] Nox client initialized');
-  return noxClient;
+let hc = null;
+
+async function getClient() {
+  if (hc) return hc;
+  const account = privateKeyToAccount(/** @type {`0x${string}`} */ (PK));
+  const wc = createWalletClient({ chain: arbitrumSepolia, transport, account });
+  hc = await createViemHandleClient(wc);
+  console.log('[nox-api] Nox client ready');
+  return hc;
 }
 
-// ── Simple HTTP server ──
+const pc = createPublicClient({ chain: arbitrumSepolia, transport });
+
+/** @type {const} */
+const BAL_ABI = [{ type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }];
+
+/** @type {const} */
+const TVL_ABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' }];
+
+/**
+ * @param {bigint} v
+ * @returns {`0x${string}`}
+ */
+function toBytes32Hex(v) {
+  return `0x${v.toString(16).padStart(64, '0')}`;
+}
+
 const server = createServer(async (req, res) => {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, headers);
+    res.writeHead(204, CORS);
     res.end();
     return;
   }
@@ -44,88 +70,76 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${PORT}`);
 
   try {
+    // ── Health check ──
     if (url.pathname === '/health') {
-      res.writeHead(200, headers);
+      res.writeHead(200, CORS);
       res.end(JSON.stringify({ ok: true }));
       return;
     }
 
-    if (url.pathname === '/decrypt') {
-      const handle = url.searchParams.get('handle');
-      if (!handle) {
-        res.writeHead(400, headers);
-        res.end(JSON.stringify({ error: 'Missing handle param' }));
-        return;
-      }
-
-      const nox = await getNox();
-      const decrypted = await nox.decrypt(handle as `0x${string}`);
-      res.writeHead(200, headers);
-      res.end(JSON.stringify({ decrypted }));
-      return;
-    }
-
-    // Get encrypted vault balance for an address
+    // ── Vault share balance for an address ──
     if (url.pathname === '/vault/balance') {
-      const userAddr = url.searchParams.get('address');
-      if (!userAddr) {
-        res.writeHead(400, headers);
-        res.end(JSON.stringify({ error: 'Missing address param' }));
+      const addr = url.searchParams.get('address');
+      if (!addr) {
+        res.writeHead(400, CORS);
+        res.end(JSON.stringify({ error: 'address required' }));
         return;
       }
 
-      // Read encrypted shares from vault contract
-      const { createPublicClient, http } = await import('viem');
-      const { arbitrumSepolia } = await import('viem/chains');
-      const pc = createPublicClient({ chain: arbitrumSepolia, transport: http() });
-      const encryptedHandle = await pc.readContract({
-        address: '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85',
-        abi: [{ type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }],
+      const raw = await pc.readContract({
+        address: /** @type {`0x${string}`} */ (VAULT),
+        abi: BAL_ABI,
         functionName: 'balanceOfShares',
-        args: [userAddr as `0x${string}`],
-      }) as bigint;
+        args: [/** @type {`0x${string}`} */ (addr)],
+      });
 
-      if (encryptedHandle === 0n) {
-        res.writeHead(200, headers);
-        res.end(JSON.stringify({ balance: 0, encrypted: false }));
+      if (raw === 0n) {
+        res.writeHead(200, CORS);
+        res.end(JSON.stringify({ balance: '0', encrypted: false }));
         return;
       }
 
-      // Decrypt through Nox
-      const nox = await getNox();
-      const decrypted = await nox.decrypt(`0x${encryptedHandle.toString(16).padStart(64, '0')}` as `0x${string}`);
-      res.writeHead(200, headers);
-      res.end(JSON.stringify({ balance: decrypted, encrypted: true }));
+      const client = await getClient();
+      const result = await client.publicDecrypt(toBytes32Hex(raw));
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        balance: String(result.value),
+        solidityType: result.solidityType,
+        encrypted: true,
+      }));
       return;
     }
 
-    // Get encrypted vault TVL
+    // ── Vault TVL ──
     if (url.pathname === '/vault/tvl') {
-      const { createPublicClient, http } = await import('viem');
-      const { arbitrumSepolia } = await import('viem/chains');
-      const pc = createPublicClient({ chain: arbitrumSepolia, transport: http() });
-      const encryptedTotalAssets = await pc.readContract({
-        address: '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85',
-        abi: [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' }],
+      const raw = await pc.readContract({
+        address: /** @type {`0x${string}`} */ (VAULT),
+        abi: TVL_ABI,
         functionName: 'totalAssets',
-      }) as bigint;
+      });
 
-      const nox = await getNox();
-      const decrypted = await nox.decrypt(`0x${encryptedTotalAssets.toString(16).padStart(64, '0')}` as `0x${string}`);
-      res.writeHead(200, headers);
-      res.end(JSON.stringify({ tvl: decrypted }));
+      const client = await getClient();
+      const result = await client.publicDecrypt(toBytes32Hex(raw));
+      res.writeHead(200, CORS);
+      res.end(JSON.stringify({
+        tvl: String(result.value),
+        solidityType: result.solidityType,
+        encrypted: true,
+      }));
       return;
     }
 
-    res.writeHead(404, headers);
-    res.end(JSON.stringify({ error: 'Not found' }));
-  } catch (err: any) {
+    res.writeHead(404, CORS);
+    res.end(JSON.stringify({ error: 'not found' }));
+  } catch (err) {
     console.error('[nox-api] Error:', err.message || err);
-    res.writeHead(500, headers);
-    res.end(JSON.stringify({ error: err.message || 'Internal error' }));
+    if (!res.headersSent) {
+      res.writeHead(500, CORS);
+      res.end(JSON.stringify({ error: err.message || 'internal' }));
+    }
   }
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[nox-api] ShadeYield Nox Decrypt API listening on :${PORT}`);
+  console.log(`[nox-api] ShadeYield Nox Decrypt API on :${PORT}`);
 });

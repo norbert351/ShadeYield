@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "viem": "^2.17.0",
-    "@iexec-nox/handle": "^0.1.0"
+    "@iexec-nox/handle": "^0.1.0-beta.13",
+    "ethers": "^6.13.0"
   }
 }

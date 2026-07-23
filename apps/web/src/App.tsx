@@ -525,7 +525,7 @@ export default function App() {
     if (!address) return;
     try {
       triggerNotification('🔐 Decrypting encrypted vault state via Nox TEE...', 'info');
-      const apiUrl = 'https://dollars-undergraduate-inns-median.trycloudflare.com';
+      const apiUrl = import.meta.env.VITE_NOX_API_URL || '';
       const [tvlRes, balRes] = await Promise.all([
         fetch(`${apiUrl}/vault/tvl`).then(r => r.json()),
         fetch(`${apiUrl}/vault/balance?address=${address}`).then(r => r.json()),
