@@ -1848,11 +1848,11 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                           <div className="grid grid-cols-2 gap-y-2 gap-x-1 font-mono text-[9px] text-zinc-400">
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">TVL</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{uniTotalAssets > 0n ? `${formatUnits(uniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Assets</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{uniTotalAssets > 0n ? `${formatUnits(uniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Debt</span>
@@ -1871,19 +1871,19 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                           <div className="grid grid-cols-2 gap-y-2 gap-x-1 font-mono text-[9px] text-zinc-400">
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">TVL</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{aaveTotalAssets > 0n ? `${formatUnits(aaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Assets</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{aaveTotalAssets > 0n ? `${formatUnits(aaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Debt</span>
-                              <span className="text-zinc-300 font-semibold">— USDC</span>
+                              <span className="text-zinc-300 font-semibold">{aavePrincipal > 0n ? `${formatUnits(aavePrincipal, 6)} USDC` : '— USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">APR</span>
-                              <span className="text-zinc-300 font-semibold">—</span>
+                              <span className="text-zinc-300 font-semibold">{aavePrincipal > 0n ? `${((Number(aaveTotalAssets - aavePrincipal) * 10000) / Number(aavePrincipal) / 100).toFixed(2)}%` : '—'}</span>
                             </div>
                           </div>
                         </div>
@@ -1979,11 +1979,11 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                           <div className="grid grid-cols-2 gap-y-2 gap-x-1 font-mono text-[9px] text-zinc-400">
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">TVL</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{uniTotalAssets > 0n ? `${formatUnits(uniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Assets</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{uniTotalAssets > 0n ? `${formatUnits(uniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Debt</span>
@@ -2002,19 +2002,19 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                           <div className="grid grid-cols-2 gap-y-2 gap-x-1 font-mono text-[9px] text-zinc-400">
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">TVL</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{aaveTotalAssets > 0n ? `${formatUnits(aaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Assets</span>
-                              <span className="text-zinc-300 font-semibold">0.00 USDC</span>
+                              <span className="text-zinc-300 font-semibold">{aaveTotalAssets > 0n ? `${formatUnits(aaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Debt</span>
-                              <span className="text-zinc-300 font-semibold">— USDC</span>
+                              <span className="text-zinc-300 font-semibold">{aavePrincipal > 0n ? `${formatUnits(aavePrincipal, 6)} USDC` : '— USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">APR</span>
-                              <span className="text-red-400 font-semibold">—</span>
+                              <span className="text-red-400 font-semibold">{aavePrincipal > 0n ? `${((Number(aaveTotalAssets - aavePrincipal) * 10000) / Number(aavePrincipal) / 100).toFixed(2)}%` : '—'}</span>
                             </div>
                           </div>
                         </div>
