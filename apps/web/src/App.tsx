@@ -305,6 +305,10 @@ export default function App() {
   const [aaveTotalAssets, setAaveTotalAssets] = useState<bigint>(0n);
   const [aavePrincipal, setAavePrincipal] = useState<bigint>(0n);
   const [uniTotalAssets, setUniTotalAssets] = useState<bigint>(0n);
+  // Simple vault's own (non-encrypted) strategy data
+  const [simpleAaveTotalAssets, setSimpleAaveTotalAssets] = useState<bigint>(0n);
+  const [simpleAavePrincipal, setSimpleAavePrincipal] = useState<bigint>(0n);
+  const [simpleUniTotalAssets, setSimpleUniTotalAssets] = useState<bigint>(0n);
   const [contractsLoaded, setContractsLoaded] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -348,7 +352,7 @@ export default function App() {
   const [activeCompareCard, setActiveCompareCard] = useState<'simple' | 'encrypted'>('encrypted');
 
   const totalTVL = simpleTotalAssets + encryptedTotalAssets;
-  const APY_SIMPLE = aavePrincipal > 0n ? Number((aaveTotalAssets - aavePrincipal) * 10000n / aavePrincipal) / 100 : 0;
+  const APY_SIMPLE = simpleAavePrincipal > 0n ? Number((simpleAaveTotalAssets - simpleAavePrincipal) * 10000n / simpleAavePrincipal) / 100 : 0;
   const APY_ENCRYPTED = APY_SIMPLE; // same strategies, same returns
   const SHADE_REWARD_RATE_SIMPLE = 0.0001;
   const SHADE_REWARD_RATE_ENCRYPTED = 0.0003;
@@ -369,10 +373,12 @@ export default function App() {
     const ENC = '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85';
     const AAVE_S = '0xbec0722b889bd6064db52d3339b1e3ae9f00abf1';
     const UNI_S = '0x3f21e1d960a6e02a6b54f4100092f57ca6b8399e';
+    const AAVE_SIMPLE = '0x15bd317773d6793d7de2b4cad0fa6cb23440c990';
+    const UNI_SIMPLE = '0x1e59cee63bbdcc6610a4a959e0b5ee5e7904daa6';
 
     const readAll = async () => {
       try {
-        const [usdcBal, stBal, encBal, sShares, eShares, aTA, aP, uTA] = await Promise.all([
+        const [usdcBal, stBal, encBal, sShares, eShares, aTA, aP, uTA, sAta, sAp, sUta] = await Promise.all([
           pc.readContract({ address: USDC, abi: tokenABI, functionName: 'balanceOf', args: [address] }),
           pc.readContract({ address: SIMPLE, abi: vaultABI, functionName: 'totalAssets' }),
           pc.readContract({ address: ENC, abi: vaultABI, functionName: 'totalAssets' }),
@@ -381,6 +387,9 @@ export default function App() {
           pc.readContract({ address: AAVE_S, abi: aaveABI, functionName: 'totalAssets' }).catch(() => 0n),
           pc.readContract({ address: AAVE_S, abi: aaveABI, functionName: 'principal' }).catch(() => 0n),
           pc.readContract({ address: UNI_S, abi: stratABI, functionName: 'totalAssets' }).catch(() => 0n),
+          pc.readContract({ address: AAVE_SIMPLE, abi: aaveABI, functionName: 'totalAssets' }).catch(() => 0n),
+          pc.readContract({ address: AAVE_SIMPLE, abi: aaveABI, functionName: 'principal' }).catch(() => 0n),
+          pc.readContract({ address: UNI_SIMPLE, abi: stratABI, functionName: 'totalAssets' }).catch(() => 0n),
         ]);
         setUsdcBalance(usdcBal as bigint);
         setWalletBalanceUSDC(parseFloat(formatUnits(usdcBal as bigint, 6)));
@@ -393,6 +402,9 @@ export default function App() {
         setAaveTotalAssets(aTA as bigint);
         setAavePrincipal(aP as bigint);
         setUniTotalAssets(uTA as bigint);
+        setSimpleAaveTotalAssets(sAta as bigint);
+        setSimpleAavePrincipal(sAp as bigint);
+        setSimpleUniTotalAssets(sUta as bigint);
         if (!contractsLoaded) setContractsLoaded(true);
       } catch (e) { console.warn('chain read error', e); }
     };
@@ -439,6 +451,7 @@ export default function App() {
     setSimpleVaultPrincipal(0); setEncryptedVaultPrincipal(0);
     setShadeBalance(0); setShadeClaimable(0);
     setUsdcBalance(0n); setSimpleTotalAssets(0n); setEncryptedTotalAssets(0n);
+    setSimpleAaveTotalAssets(0n); setSimpleAavePrincipal(0n); setSimpleUniTotalAssets(0n);
     triggerNotification('Wallet disconnected.', 'info');
   };
 
@@ -1848,11 +1861,11 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                           <div className="grid grid-cols-2 gap-y-2 gap-x-1 font-mono text-[9px] text-zinc-400">
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">TVL</span>
-                              <span className="text-zinc-300 font-semibold">{uniTotalAssets > 0n ? `${formatUnits(uniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
+                              <span className="text-zinc-300 font-semibold">{simpleUniTotalAssets > 0n ? `${formatUnits(simpleUniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Assets</span>
-                              <span className="text-zinc-300 font-semibold">{uniTotalAssets > 0n ? `${formatUnits(uniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
+                              <span className="text-zinc-300 font-semibold">{simpleUniTotalAssets > 0n ? `${formatUnits(simpleUniTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Debt</span>
@@ -1871,19 +1884,19 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                           <div className="grid grid-cols-2 gap-y-2 gap-x-1 font-mono text-[9px] text-zinc-400">
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">TVL</span>
-                              <span className="text-zinc-300 font-semibold">{aaveTotalAssets > 0n ? `${formatUnits(aaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
+                              <span className="text-zinc-300 font-semibold">{simpleAaveTotalAssets > 0n ? `${formatUnits(simpleAaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Assets</span>
-                              <span className="text-zinc-300 font-semibold">{aaveTotalAssets > 0n ? `${formatUnits(aaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
+                              <span className="text-zinc-300 font-semibold">{simpleAaveTotalAssets > 0n ? `${formatUnits(simpleAaveTotalAssets, 6)} USDC` : '0.00 USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">Debt</span>
-                              <span className="text-zinc-300 font-semibold">{aavePrincipal > 0n ? `${formatUnits(aavePrincipal, 6)} USDC` : '— USDC'}</span>
+                              <span className="text-zinc-300 font-semibold">{simpleAavePrincipal > 0n ? `${formatUnits(simpleAavePrincipal, 6)} USDC` : '— USDC'}</span>
                             </div>
                             <div>
                               <span className="text-zinc-600 block text-[8px] uppercase">APR</span>
-                              <span className="text-zinc-300 font-semibold">{aavePrincipal > 0n ? `${((Number(aaveTotalAssets - aavePrincipal) * 10000) / Number(aavePrincipal) / 100).toFixed(2)}%` : '—'}</span>
+                              <span className="text-zinc-300 font-semibold">{simpleAavePrincipal > 0n ? `${((Number(simpleAaveTotalAssets - simpleAavePrincipal) * 10000) / Number(simpleAavePrincipal) / 100).toFixed(2)}%` : '—'}</span>
                             </div>
                           </div>
                         </div>
