@@ -1,108 +1,130 @@
-# ShadeYield
+# ShadeYield — Private Yield Vaults on iExec Nox
 
-A **Nox-native private yield vault** on Arbitrum Sepolia. Users deposit USDC into a vault that mints **encrypted shares** (Nox `euint256`). Capital is deployed to **Aave V3** and **Uniswap V3** via strategy adapters. Individual share balances are private; protocol composability is preserved.
+**WTF Hackathon Summer Edition** — Built with iExec Nox Confidential Smart Contracts
 
-## Live Deployments (Arbitrum Sepolia)
+ShadeYield is a **privacy-first yield vault** that encrypts user share balances using iExec Nox Trusted Execution Environments (TEEs). Users deposit USDC, earn yield, and withdraw — but nobody can see how much they hold except them.
 
-| Contract | Address | Notes |
-|----------|---------|-------|
-| **ShadeAaveVault (Encrypted)** | `0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85` | Nox `euint256` shares, permissionless harvest |
-| ShadeAaveVaultSimple | `0x5b1876a08aa687a70203ae28f1421d62f538dd1c` | Transparent vault (fallback) |
-| ShadeToken (sUSDC) | `0x39a54acda9c9b8deaf3e569bcf87eebf8e7a15d5` | 18 decimal test stablecoin |
-| USDC | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | 6 decimal test USDC |
-| AaveStrategy (enc vault) | `0xbec0722b889bd6064db52d3339b1e3ae9f00abf1` | Deposits into Aave V3 Pool |
-| UniswapV3Strategy (enc vault) | `0x3f21e1d960a6e02a6b54f4100092f57ca6b8399e` | USDC/DAI concentrated liquidity |
-| Aave V3 Pool | `0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff` | Public Aave pool on Sepolia |
-| NoxCompute | `0xd464B198f06756a1d00be223634b85E0a731c229` | Nox encrypted compute precompile |
+## Live Deployments (ETH Sepolia)
 
-**Chain:** Arbitrum Sepolia (`421614`) · **RPC:** `https://sepolia-rollup.arbitrum.io/rpc` · **Explorer:** `https://sepolia.arbiscan.io`
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| **Simple Vault** (transparent) | `0x2d5c88b952aaaa71457a22071e1b9f04d47977e0` | [Etherscan](https://sepolia.etherscan.io/address/0x2d5c88b952aaaa71457a22071e1b9f04d47977e0) |
+| **Encrypted Vault** (Nox) | `0x39a54acda9c9b8deaf3e569bcf87eebf8e7a15d5` | [Etherscan](https://sepolia.etherscan.io/address/0x39a54acda9c9b8deaf3e569bcf87eebf8e7a15d5) |
+| **TestUSDC** | `0xa77d034ff9801337814e47a2843056c6bb99582e` | [Etherscan](https://sepolia.etherscan.io/address/0xa77d034ff9801337814e47a2843056c6bb99582e) |
+| **Nox Compute** | `0xd464B198f06756a1d00be223634b85E0a731c229` | Precompile |
 
-## Harvest (Permissionless)
+**Chain:** ETH Sepolia (`11155111`) · RPC: `https://ethereum-sepolia.publicnode.com`
 
-`harvestAll()` is **open to everyone** — no owner-only restriction. The caller earns **0.05%** of harvested yield as an incentive. Anyone can call it via the Telegram bot (`/harvest`), the web UI, or directly on-chain.
+## How It Works
+
+### Simple Vault Flow
+```
+User deposits USDC → Simple Vault
+                      ↓ auto-allocate
+                  HoldStrategy (or Aave/Uniswap in production)
+                      ↓
+                  Shares minted (transparent ERC-20)
+```
+
+### Encrypted Vault Flow
+```
+User deposits USDC → Encrypted Vault
+                      ↓ auto-allocate
+                  HoldStrategy
+                      ↓
+                  Shares encrypted as Nox euint256
+                      ↓ (only user can decrypt via Nox API)
+                  Balance visible in UI after decryption
+```
 
 ## Privacy Model
 
-| Data | Visibility |
-|------|------------|
-| Deposit/withdraw asset amounts | Public (standard ERC-20 transfers) |
-| User share balance | Encrypted (Nox `euint256`) |
-| Vault total assets | Encrypted, public decryption allowed for TVL |
-| Strategy positions | Public (visible on Aave/Uniswap) |
-| Individual yield share | Private (derived from encrypted shares) |
-
-## Architecture
-
-```
-User deposits USDC → Encrypted Vault → allocates to strategies
-         ↓                                    ↓
-   Encrypted shares (Nox)            AaveStrategy → Aave V3 Pool
-         ↓                           UniswapV3Strategy → Uniswap V3
-   Private balance                        ↓
-                                   harvestAll() (permissionless)
-                                          ↓
-                               Yield → vault + 0.05% caller incentive
-```
-
-## Quick Links
-
-- **Telegram Bot:** [@shadeyield_bot](https://t.me/shadeyield_bot) — `/start`, `/status`, `/balance`, `/harvest`, `/contracts`
-- **Web UI:** `http://localhost:3000` (or Cloudflare tunnel)
-- **Explorer:** [Arbiscan Sepolia](https://sepolia.arbiscan.io)
-
-## Getting Test USDC
-
-- Arbitrum Sepolia faucet: https://faucet.quicknode.com/arbitrum/sepolia
-- Request USDC + ETH for gas on Arbitrum Sepolia
+| Data | Simple Vault | Encrypted Vault |
+|------|-------------|-----------------|
+| Share balance | Public (uint256) | Encrypted (euint256) |
+| Deposit amount | Public | Public |
+| TVL | Public | Encrypted (public-decrypt) |
+| Individual yield | Public | Private |
+| Strategy positions | Public | Public |
 
 ## Setup
 
+### Prerequisites
+- Node.js 22+
+- MetaMask or any Web3 wallet
+- Test ETH from Sepolia faucet
+
+### Frontend
+```bash
+cd apps/web
+npm install
+cp .env.example .env  # Set VITE_NOX_API_URL if running Nox backend
+npx vite dev          # Local dev on port 3000
+```
+
+### Smart Contracts
 ```bash
 cd packages/contracts
 npm install
 npx hardhat compile
 ```
 
-## Deploy
-
-### Encrypted vault + strategies
-
+### Deploy
 ```bash
-export PK=0x...
-RPC=https://sepolia-rollup.arbitrum.io/rpc npx tsx scripts/deployNoxEncrypted.ts
-RPC=https://sepolia-rollup.arbitrum.io/rpc npx tsx scripts/deployStrategies.ts
-```
-
-### Simple vault (non-Nox)
-
-```bash
+cd packages/contracts
 export PRIVATE_KEY=0x...
-npx hardhat run scripts/deploySepolia.ts --network arbitrumSepolia
+npx tsx scripts/deploySepoliaHackathon.ts
 ```
 
-## Test
-
+### Nox Decrypt API (optional)
 ```bash
-npx hardhat test        # local (requires Docker for Nox off-chain services)
+cd packages/contracts
+npx tsx nox-api.ts    # Runs on port 3139
+# Expose via cloudflare tunnel:
+cloudflared tunnel --url http://localhost:3139
 ```
 
-## Usage flow
+## Architecture
 
-1. Deploy vault + strategies (above)
-2. Deposit USDC via web UI or bot (`/deposit <amount>`)
-3. Allocate to strategies: `vault.allocateToStrategy(strategyAddr, amount)`
-4. Call `vault.harvestAll()` (permissionless) to compound yield
-5. Request withdrawal: `vault.requestWithdraw(shares)`, then `vault.claimWithdraw(user, amount)`
+```
+┌─────────────┐    ┌──────────────────┐    ┌──────────────┐
+│  User       │───→│  ShadeYield      │───→│  Strategy    │
+│  Wallet     │    │  Vault           │    │  (Hold/Aave) │
+└─────────────┘    └──────────────────┘    └──────────────┘
+                          │
+                          ↓
+              ┌──────────────────────┐
+              │  Simple: uint256    │
+              │  Encrypted: euint256│
+              └──────────────────────┘
+                          │
+              ┌──────────────────────┐
+              │  Nox TEE Decrypt API │
+              │  (off-chain)         │
+              └──────────────────────┘
+```
 
-## Bots & Automation
+## Smart Contracts
 
-| Service | Schedule | Method |
-|---------|----------|--------|
-| Telegram Bot | Continuous | `npx tsx apps/bot/src/index.ts` |
-| Harvest | Every 8h | Cron script → `harvestAll()` |
-| Bot Keeper | Every 5m | Cron check → restart if down |
-| Web Keeper | Every 5m | Cron check → restart vite if down |
+### ShadeAaveVaultSimple.sol
+Transparent vault with plain uint256 share tracking. Auto-allocates deposits to strategy on deposit. Pulls from strategy on withdraw when idle balance is low.
+
+### ShadeAaveVault.sol (Nox-encrypted)
+Confidential vault using iExec Nox `euint256` for share state. Encrypted math (`Nox.add`, `Nox.div`, `Nox.select`) processes encrypted values without exposing plaintext on-chain. `totalAssets` has `allowPublicDecryption` for TVL display.
+
+### HoldStrategy.sol
+Minimal strategy for ETH Sepolia demo. Holds deposited assets. Replace with Aave V3/Morpho/Uniswap for real yield.
+
+## Tests
+```bash
+cd packages/contracts
+npx hardhat test
+```
 
 ## License
-
 MIT
+
+## Links
+- GitHub: https://github.com/norbert351/ShadeYield
+- iExec Nox: https://iex.ec/nox
+- ETH Sepolia Faucet: https://faucet.quicknode.com/ethereum/sepolia

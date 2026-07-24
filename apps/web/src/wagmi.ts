@@ -1,12 +1,12 @@
 import { http, createConfig } from 'wagmi';
-import { arbitrumSepolia } from 'wagmi/chains';
+import { sepolia } from 'wagmi/chains';
 import { injected, walletConnect } from 'wagmi/connectors';
 import { createWeb3Modal } from '@web3modal/wagmi/react';
 
-const RPC_URL = 'https://sepolia-rollup.arbitrum.io/rpc';
+const RPC_URL = 'https://ethereum-sepolia.publicnode.com';
 
 export const config = createConfig({
-  chains: [arbitrumSepolia],
+  chains: [sepolia],
   connectors: [
     injected(),
     walletConnect({
@@ -15,13 +15,13 @@ export const config = createConfig({
     }),
   ],
   transports: {
-    [arbitrumSepolia.id]: http(RPC_URL),
+    [sepolia.id]: http(RPC_URL),
   },
 });
 
-// Initialize Web3Modal - must be called at module level
+// Initialize Web3Modal
 createWeb3Modal({
   wagmiConfig: config,
   projectId: import.meta.env.VITE_WC_PROJECT_ID ?? '8c5688f834e58fd36346ba37a33c586f',
-  defaultChain: arbitrumSepolia,
+  defaultChain: sepolia,
 });
