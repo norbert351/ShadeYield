@@ -94,6 +94,16 @@ contract ShadeAaveVault {
         Nox.allowThis(userShares);
         Nox.allow(userShares, msg.sender);
 
+        // Auto-allocate deposited funds to the first registered strategy
+        if (strategies.length > 0) {
+            address strat = strategies[0];
+            if (isStrategy[strat]) {
+                IStrategy(strat).deposit(amount);
+                totalAllocated += amount;
+                emit Allocated(strat, amount);
+            }
+        }
+
         emit Deposited(msg.sender, amount);
     }
 
@@ -127,7 +137,24 @@ contract ShadeAaveVault {
 
     function claimWithdraw(address user, uint256 amount) external {
         require(amount > 0, "Zero amount");
-        require(IERC20(asset).balanceOf(address(this)) >= amount, "Insufficient idle");
+
+        // Pull from strategies if vault doesn't have enough idle balance
+        uint256 idleBalance = IERC20(asset).balanceOf(address(this));
+        if (idleBalance < amount) {
+            uint256 needed = amount - idleBalance;
+            for (uint256 i = 0; i < strategies.length; i++) {
+                address s = strategies[i];
+                if (!isStrategy[s]) continue;
+                uint256 stratBalance = IStrategy(s).totalAssets();
+                if (stratBalance == 0) continue;
+                uint256 toPull = needed < stratBalance ? needed : stratBalance;
+                uint256 pulled = IStrategy(s).withdraw(toPull);
+                if (totalAllocated >= pulled) totalAllocated -= pulled; else totalAllocated = 0;
+                if (pulled >= needed) break;
+                needed -= pulled;
+            }
+            require(IERC20(asset).balanceOf(address(this)) >= amount, "Insufficient liquidity after deallocation");
+        }
 
         pendingWithdrawals[user] = Nox.sub(pendingWithdrawals[user], Nox.toEuint256(amount));
 

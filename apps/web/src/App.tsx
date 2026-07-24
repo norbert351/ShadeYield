@@ -2185,6 +2185,19 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                       </div>
                     </div>
 
+                    {/* Auto-allocate info badge - only on deposit */}
+                    {activeTab === 'deposit' && (
+                      <div className="mb-4 p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/30 flex items-center gap-3">
+                        <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <div>
+                          <span className="text-xs font-bold text-emerald-300">Auto-deploy to Strategy</span>
+                          <p className="text-[10px] text-zinc-400 mt-0.5">
+                            Deposited USDC is automatically allocated to the vault's yield strategies (Aave + Uniswap). No manual allocation needed.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Submit Button */}
                     <button
                       type="submit"
@@ -2203,7 +2216,7 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                       ) : activeTab === 'deposit' ? (
                         <>
                           <ArrowDownRight className="w-4.5 h-4.5" />
-                          Execute Vault Deposit
+                          Deposit & Auto-Deploy to Strategy
                         </>
                       ) : (
                         <>
@@ -2277,8 +2290,8 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                             <div className="w-4.5 h-4.5 rounded-full border border-zinc-800 shrink-0"></div>
                           )}
                           <div className={txStep === 2 ? 'text-zinc-200' : 'text-zinc-500'}>
-                            <span>[2/3] Transferring USDC into ShadeYield Gate Contract</span>
-                            {txStep === 2 && <span className="block text-[10px] text-zinc-500 mt-1">Calling 0xd76ecef... transferFrom. Simulating blockchain confirmation.</span>}
+                            <span>[2/3] Depositing USDC & Auto-Allocating to Strategy</span>
+                            {txStep === 2 && <span className="block text-[10px] text-zinc-500 mt-1">Calling vault deposit — funds transfer into vault and auto-deploy to Aave/Uniswap strategies in one transaction.</span>}
                           </div>
                         </div>
 
@@ -2294,12 +2307,12 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                             <div className="w-4.5 h-4.5 rounded-full border border-zinc-800 shrink-0"></div>
                           )}
                           <div className={txStep === 3 ? 'text-zinc-200' : 'text-zinc-500'}>
-                            <span>[3/3] {selectedVault === 'encrypted' ? 'TEE iExec Nox Encryption Engine Locking' : 'Minting Transparent ERC-20 Share State'}</span>
+                            <span>[3/3] {selectedVault === 'encrypted' ? 'TEE Nox Encrypting Shares & Auto-Deploying Funds' : 'Minting Shares & Funds Deployed to Strategy'}</span>
                             {txStep === 3 && (
                               <span className="block text-[10px] text-indigo-400 mt-1 animate-pulse">
                                 {selectedVault === 'encrypted' 
-                                  ? 'Generating ciphertext. Sandbox executing nox.encryptBalance() client flow...'
-                                  : 'Broadcasting open ledger share supply update...'
+                                  ? 'Generating ciphertext. Sandbox executing nox.encryptBalance() client flow. USDC allocated to Aave/Uniswap in same tx.'
+                                  : 'Broadcasting open ledger share supply update. Deposited USDC auto-allocated to strategies.'
                                 }
                               </span>
                             )}
