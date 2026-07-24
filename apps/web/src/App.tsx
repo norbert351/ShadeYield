@@ -369,12 +369,12 @@ export default function App() {
     const vaultABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
                       { type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
     const USDC = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d';
-    const SIMPLE = '0x5b1876a08aa687a70203ae28f1421d62f538dd1c';
-    const ENC = '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85';
-    const AAVE_S = '0xbec0722b889bd6064db52d3339b1e3ae9f00abf1';
-    const UNI_S = '0x3f21e1d960a6e02a6b54f4100092f57ca6b8399e';
-    const AAVE_SIMPLE = '0x15bd317773d6793d7de2b4cad0fa6cb23440c990';
-    const UNI_SIMPLE = '0x1e59cee63bbdcc6610a4a959e0b5ee5e7904daa6';
+    const SIMPLE = '0xb53fe2f6f1d60a107ede44ccde32be915a7cc395';
+    const ENC = '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d';
+    const AAVE_S = '0x3255818aa50af0e9b7a07c887acd85cf7770c4ef';
+    const UNI_S = '0x2acde84ab0d15873f3ea90608da9b48ae8fe605a';
+    const AAVE_SIMPLE = '0x68e18a2f9aee5b6d428f08f6b12a0bfb92a53893';
+    const UNI_SIMPLE = '0xc8ff059d43dbf1b87ee9174725e475af8cdac0a5';
 
     const readAll = async () => {
       try {
@@ -417,8 +417,8 @@ export default function App() {
   useEffect(() => {
     const pc = createPublicClient({ chain: arbitrumSepolia, transport: http('https://sepolia-rollup.arbitrum.io/rpc') });
     const vaultABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
-    const SIMPLE = '0x5b1876a08aa687a70203ae28f1421d62f538dd1c';
-    const ENC = '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85';
+    const SIMPLE = '0xb53fe2f6f1d60a107ede44ccde32be915a7cc395';
+    const ENC = '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d';
     const readPublic = async () => {
       try {
         const [stBal, encBal] = await Promise.all([
@@ -468,7 +468,7 @@ export default function App() {
     }
     setIsProcessingTx(true); setTxStep(1);
     try {
-      const vaultAddr = selectedVault === 'simple' ? '0x5b1876a08aa687a70203ae28f1421d62f538dd1c' : '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85';
+      const vaultAddr = selectedVault === 'simple' ? '0xb53fe2f6f1d60a107ede44ccde32be915a7cc395' : '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d';
       const USDC = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d';
       const amountWei = parseUnits(amountInput, 6);
       const pc = createPublicClient({ chain: arbitrumSepolia, transport: http('https://sepolia-rollup.arbitrum.io/rpc') });
@@ -515,7 +515,7 @@ export default function App() {
     try {
       const pc = createPublicClient({ chain: arbitrumSepolia, transport: http('https://sepolia-rollup.arbitrum.io/rpc') });
       const harvestABI = [{ type: 'function', name: 'harvestAll', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'nonpayable' }];
-      const { request } = await pc.simulateContract({ address: '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85', abi: harvestABI, functionName: 'harvestAll', account: address });
+      const { request } = await pc.simulateContract({ address: '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d', abi: harvestABI, functionName: 'harvestAll', account: address });
       const actions = await import('wagmi/actions');
       const wcfg = (await import('./wagmi')).config;
       const h = await actions.writeContract(wcfg, request); setTxHash(h);

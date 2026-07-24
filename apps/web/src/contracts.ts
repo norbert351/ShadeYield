@@ -4,13 +4,11 @@ import { type Address } from 'viem';
 export const ADDRESSES = {
   USDC:               '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' as Address,
   ShadeToken:         '0x39a54acda9c9b8deaf3e569bcf87eebf8e7a15d5' as Address,
-  SimpleVault:        '0x5b1876a08aa687a70203ae28f1421d62f538dd1c' as Address,
-  EncryptedVault:     '0x7c9e196d879c60f39d4d591fbae1a7369bbb6f85' as Address,
-  AaveStrategy:       '0x15bd317773d6793d7de2b4cad0fa6cb23440c990' as Address,
-  UniswapStrategy:    '0x1e59cee63bbdcc6610a4a959e0b5ee5e7904daa6' as Address,
-  // Encrypted vault strategies (new)
-  AaveStrategyEnc:    '0xbec0722b889bd6064db52d3339b1e3ae9f00abf1' as Address,
-  UniswapStrategyEnc: '0x3f21e1d960a6e02a6b54f4100092f57ca6b8399e' as Address,
+  SimpleVault:        '0xb53fe2f6f1d60a107ede44ccde32be915a7cc395' as Address,
+  EncryptedVault:     '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d' as Address,
+  AaveStrategy:       '0x3255818aa50af0e9b7a07c887acd85cf7770c4ef' as Address,
+  UniswapStrategy:    '0x2acde84ab0d15873f3ea90608da9b48ae8fe605a' as Address,
+  AaveStrategyEnc:    '0x68e18a2f9aee5b6d428f08f6b12a0bfb92a53893' as Address,
   AavePool:           '0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff' as Address,
 } as const;
 
