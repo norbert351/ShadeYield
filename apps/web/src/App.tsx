@@ -367,7 +367,8 @@ export default function App() {
     const tokenABI = [{ type: 'function', name: 'balanceOf', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
                        { type: 'function', name: 'decimals', inputs: [], outputs: [{ type: 'uint8' }], stateMutability: 'view' }] as const;
     const vaultABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' },
-                      { type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
+                       { type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
+    const encABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
     const USDC = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d';
     const SIMPLE = '0xb53fe2f6f1d60a107ede44ccde32be915a7cc395';
     const ENC = '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d';
@@ -381,9 +382,9 @@ export default function App() {
         const [usdcBal, stBal, encBal, sShares, eShares, aTA, aP, uTA, sAta, sAp, sUta] = await Promise.all([
           pc.readContract({ address: USDC, abi: tokenABI, functionName: 'balanceOf', args: [address] }),
           pc.readContract({ address: SIMPLE, abi: vaultABI, functionName: 'totalAssets' }),
-          pc.readContract({ address: ENC, abi: vaultABI, functionName: 'totalAssets' }),
+          pc.readContract({ address: ENC, abi: encABI, functionName: 'totalAssets' }),
           pc.readContract({ address: SIMPLE, abi: vaultABI, functionName: 'balanceOfShares', args: [address] }).catch(() => 0n),
-          pc.readContract({ address: ENC, abi: vaultABI, functionName: 'balanceOfShares', args: [address] }).catch(() => 0n),
+          Promise.resolve(0n), // Encrypted balanceOfShares is Nox euint256 — not readable without Nox API
           pc.readContract({ address: AAVE_S, abi: aaveABI, functionName: 'totalAssets' }).catch(() => 0n),
           pc.readContract({ address: AAVE_S, abi: aaveABI, functionName: 'principal' }).catch(() => 0n),
           pc.readContract({ address: UNI_S, abi: stratABI, functionName: 'totalAssets' }).catch(() => 0n),
@@ -548,18 +549,16 @@ export default function App() {
       triggerNotification('🔐 Decrypting encrypted vault state via Nox TEE...', 'info');
       const apiUrl = import.meta.env.VITE_NOX_API_URL || '';
       if (!apiUrl) {
-        // No API — read encrypted vault TVL directly from chain (transparent for demo)
+        // No API — read totalAssets (public-decrypt enabled for demo)
         const pc = createPublicClient({ chain: arbitrumSepolia, transport: http('https://sepolia-rollup.arbitrum.io/rpc') });
         const encAddr = '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d' as const;
         const vaultABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
         const tvl = await pc.readContract({ address: encAddr, abi: vaultABI, functionName: 'totalAssets' }) as bigint;
         setEncryptedTotalAssets(tvl);
-        // User balance: query chain (simple vault transparency)
-        const userBal = await pc.readContract({ address: encAddr, abi: [{ type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const, functionName: 'balanceOfShares', args: [address] }) as bigint;
-        const bal = Number(userBal) / 1e6;
-        setEncryptedVaultBalance(bal);
-        setEncryptedVaultPrincipal(bal);
-        triggerNotification(`✅ Encrypted vault TVL: ${(Number(tvl) / 1e6).toFixed(2)} USDC`, 'success');
+        // Can't read user balance without Nox API — encrypted shares are opaque
+        setEncryptedVaultBalance(0);
+        setEncryptedVaultPrincipal(0);
+        triggerNotification(`✅ Encrypted vault TVL: ${(Number(tvl) / 1e6).toFixed(2)} USDC — balance requires Nox API`, 'success');
       } else {
         const [tvlRes, balRes] = await Promise.all([
           fetch(`${apiUrl}/vault/tvl`).then(r => r.json()),
