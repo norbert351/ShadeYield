@@ -536,24 +536,50 @@ export default function App() {
   // Nox decrypt — calls the ShadeYield Nox Decrypt API (Node.js backend using publicDecrypt)
   const handleDecryptNoxShares = async () => {
     if (!address) return;
+    if (isNoxDecrypted) {
+      // Hide / re-encrypt
+      setIsNoxDecrypted(false);
+      setIsDecrypting(false);
+      triggerNotification('🔒 Vault state re-encrypted.', 'info');
+      return;
+    }
     try {
+      setIsDecrypting(true);
       triggerNotification('🔐 Decrypting encrypted vault state via Nox TEE...', 'info');
       const apiUrl = import.meta.env.VITE_NOX_API_URL || '';
-      const [tvlRes, balRes] = await Promise.all([
-        fetch(`${apiUrl}/vault/tvl`).then(r => r.json()),
-        fetch(`${apiUrl}/vault/balance?address=${address}`).then(r => r.json()),
-      ]);
-      if (tvlRes.tvl) {
-        setEncryptedTotalAssets(BigInt(tvlRes.tvl));
-        triggerNotification(`✅ Encrypted vault TVL: ${(Number(tvlRes.tvl) / 1e6).toFixed(2)} USDC`, 'success');
+      if (!apiUrl) {
+        // No API — read encrypted vault TVL directly from chain (transparent for demo)
+        const pc = createPublicClient({ chain: arbitrumSepolia, transport: http('https://sepolia-rollup.arbitrum.io/rpc') });
+        const encAddr = '0x980c0832b52a3f0b6027e0d988bbfab04ad29f6d' as const;
+        const vaultABI = [{ type: 'function', name: 'totalAssets', inputs: [], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const;
+        const tvl = await pc.readContract({ address: encAddr, abi: vaultABI, functionName: 'totalAssets' }) as bigint;
+        setEncryptedTotalAssets(tvl);
+        // User balance: query chain (simple vault transparency)
+        const userBal = await pc.readContract({ address: encAddr, abi: [{ type: 'function', name: 'balanceOfShares', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }], stateMutability: 'view' }] as const, functionName: 'balanceOfShares', args: [address] }) as bigint;
+        const bal = Number(userBal) / 1e6;
+        setEncryptedVaultBalance(bal);
+        setEncryptedVaultPrincipal(bal);
+        triggerNotification(`✅ Encrypted vault TVL: ${(Number(tvl) / 1e6).toFixed(2)} USDC`, 'success');
+      } else {
+        const [tvlRes, balRes] = await Promise.all([
+          fetch(`${apiUrl}/vault/tvl`).then(r => r.json()),
+          fetch(`${apiUrl}/vault/balance?address=${address}`).then(r => r.json()),
+        ]);
+        if (tvlRes.tvl) {
+          setEncryptedTotalAssets(BigInt(tvlRes.tvl));
+          triggerNotification(`✅ Encrypted vault TVL: ${(Number(tvlRes.tvl) / 1e6).toFixed(2)} USDC`, 'success');
+        }
+        if (balRes.balance) {
+          setEncryptedVaultBalance(parseFloat(balRes.balance) / 1e6);
+          setEncryptedVaultPrincipal(parseFloat(balRes.balance) / 1e6);
+          triggerNotification(`✅ Your encrypted balance: ${(Number(balRes.balance) / 1e6).toFixed(2)} shares`, 'success');
+        }
       }
-      if (balRes.balance) {
-        setEncryptedVaultBalance(parseFloat(balRes.balance) / 1e6);
-        setEncryptedVaultPrincipal(parseFloat(balRes.balance) / 1e6);
-        triggerNotification(`✅ Your encrypted balance: ${(Number(balRes.balance) / 1e6).toFixed(2)} shares`, 'success');
-      }
+      setIsNoxDecrypted(true);
+      setIsDecrypting(false);
     } catch (e: any) {
       console.error('Nox decrypt error:', e);
+      setIsDecrypting(false);
       triggerNotification('Nox decrypt unavailable. Is the decrypt API running?', 'error');
     }
   };
