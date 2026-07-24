@@ -2380,15 +2380,15 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
 
                     <button
                       onClick={handleDecryptNoxShares}
-                      disabled={isDecrypting || encryptedVaultBalance <= 0}
+                      disabled={isDecrypting}
                       className={`w-full py-3 rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        encryptedVaultBalance <= 0
-                          ? 'bg-zinc-950 text-zinc-600 border border-zinc-800/50 cursor-not-allowed'
-                          : isNoxDecrypted
+                        isNoxDecrypted
                           ? 'bg-zinc-800 text-red-300 border border-red-800 hover:bg-zinc-700'
                           : isDecrypting
                           ? 'bg-zinc-950 border border-zinc-800 text-zinc-500'
                           : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-md shadow-red-950/40'
+                      } ${
+                        !isNoxDecrypted && !isDecrypting ? 'cursor-pointer' : ''
                       }`}
                     >
                       {isDecrypting ? (
@@ -2409,9 +2409,9 @@ console.log(\`Actual Share Balance: \${decryptedShares}\`);`
                       )}
                     </button>
 
-                    {encryptedVaultBalance <= 0 && (
+                    {!isNoxDecrypted && !isDecrypting && (
                       <div className="text-[10px] text-zinc-500 text-center">
-                        ⚠️ Deposit USDC in the Encrypted Vault to activate decryptor
+                        💡 Click "Decrypt Vault State" to reveal your encrypted balance via Nox TEE
                       </div>
                     )}
 
