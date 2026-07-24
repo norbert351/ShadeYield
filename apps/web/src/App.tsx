@@ -318,6 +318,9 @@ export default function App() {
 
   // Nox Encryption state
   const [isNoxDecrypted, setIsNoxDecrypted] = useState<boolean>(false);
+  const isNoxDecryptedRef = useRef(false);
+  // Keep ref in sync
+  useEffect(() => { isNoxDecryptedRef.current = isNoxDecrypted; }, [isNoxDecrypted]);
   const [noxPrivateKey, setNoxPrivateKey] = useState<string>('nox_sk_9a7b8e2f11c34891a92e1850fcb1280f');
   const [isDecrypting, setIsDecrypting] = useState<boolean>(false);
   const [isArtCardFlipped, setIsArtCardFlipped] = useState<boolean>(false);
@@ -394,11 +397,14 @@ export default function App() {
         setUsdcBalance(usdcBal as bigint);
         setWalletBalanceUSDC(parseFloat(formatUnits(usdcBal as bigint, 6)));
         setSimpleTotalAssets(stBal as bigint);
-        setEncryptedTotalAssets(encBal as bigint);
+        // Preserve decrypted encrypted vault state — don't overwrite with 0
+        if (!isNoxDecryptedRef.current) {
+          setEncryptedTotalAssets(encBal as bigint);
+          setEncryptedVaultPrincipal(0);
+          setEncryptedVaultBalance(0);
+        }
         setSimpleVaultPrincipal(parseFloat(formatUnits(sShares as bigint, 6)));
-        setEncryptedVaultPrincipal(0); // Encrypted — not readable without Nox API
         setSimpleVaultBalance(parseFloat(formatUnits(sShares as bigint, 6)));
-        setEncryptedVaultBalance(0); // Encrypted — not readable without Nox API
         setAaveTotalAssets(aTA as bigint);
         setAavePrincipal(aP as bigint);
         setUniTotalAssets(uTA as bigint);
